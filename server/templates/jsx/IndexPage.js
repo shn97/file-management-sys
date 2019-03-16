@@ -1,6 +1,41 @@
 class IndexPage extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      isLoggedIn: false
+    };
+    this.handleLoginRedirect = this.handleLoginRedirect.bind(this);
+    this.handleLogoutRedirect = this.handleLogoutRedirect.bind(this);
+  }
+
+  handleLoginRedirect() {
+    this.setState({
+      isLoggedIn: true
+    });
+  }
+
+  handleLogoutRedirect() {
+    this.setState({
+      isLoggedIn: false
+    });
+  }
+
   render() {
-    return React.createElement("div", null, React.createElement(LoginPage, null));
+    let displayLoginPage = this.state.isLoggedIn ? "none" : "";
+    let displayFileManagementPage = this.state.isLoggedIn ? "" : "none";
+    return React.createElement("div", null, React.createElement("div", {
+      style: {
+        display: displayLoginPage
+      }
+    }, React.createElement(LoginPage, {
+      handleLoginRedirect: this.handleLoginRedirect
+    })), React.createElement("div", {
+      style: {
+        display: displayFileManagementPage
+      }
+    }, React.createElement(FileManagementPage, {
+      handleLogoutRedirect: this.handleLogoutRedirect
+    })));
   }
 
 }
@@ -53,11 +88,17 @@ class LoginPage extends React.Component {
       success: response => {
         if (response.success) {
           alert("Successfully Logged in! Welcome back " + this.state.username);
+          this.props.handleLoginRedirect();
         } else {
           alert("Failed to login " + this.state.username);
         }
       }
     });
+  }
+
+  handleUploadFile() {
+    let data = this.state;
+    $.ajax({});
   }
 
   displayLoginButton() {
@@ -86,6 +127,41 @@ class LoginPage extends React.Component {
       type: "text",
       onChange: this.handleOnPasswordChange
     })), this.displayLoginButton());
+  }
+
+}
+
+class FileManagementPage extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {};
+    this.handleOnLogout = this.handleOnLogout.bind(this);
+  }
+
+  handleOnLogout() {
+    $.ajax({
+      url: "/api/logout",
+      type: "GET",
+      success: response => {
+        if (response.success) {
+          alert("Successfully Logged out!");
+          this.props.handleLogoutRedirect();
+        } else {
+          alert("Failed to logout for user \"" + this.state.username + "\"");
+        }
+      }
+    });
+  }
+
+  render() {
+    return React.createElement("div", null, React.createElement("div", {
+      id: "divTopBar"
+    }, React.createElement("button", {
+      id: "btnLogout",
+      onClick: this.handleOnLogout
+    }, "Logout")), React.createElement("div", {
+      id: "divFileTree"
+    }));
   }
 
 }

@@ -24,6 +24,10 @@ def login():
         session['user'] = user.to_json()
     return jsonify(success=is_authenticated)
 
+@app.route('/api/logout', methods=['GET'])
+def logout():
+    session.pop('user')
+    return jsonify(success=True)
 
 @app.route('/api/users', methods=['POST'])
 def create_user():
