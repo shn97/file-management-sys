@@ -1,26 +1,35 @@
-from flask import Flask, request, render_template, g, jsonify, send_from_directory
+from flask import Flask, request, render_template, g, jsonify, send_from_directory, session, make_response
 
 from server.database.DatabaseManagment import DatabaseManagement
 from server.models.User import User
+import json
 
 app = Flask(__name__)
+# TODO: Make a more secure secret key
+app.secret_key = "some secret key"
 
-db_manager = DatabaseManagement(app)
-db_manager.create_db()
+db_manager = DatabaseManagement()
+db_manager.create_db(app)
 
 @app.route('/index')
 def index():
     return render_template('index.html')
 
-@app.route('/api/login')
+@app.route('/api/users', methods=['GET'])
 def login():
-    return
+    data = request.args
+    user = User(data.get("username"), data.get("password"))
+    is_authenticated = user.check_user_exist()
+    if is_authenticated:
+        session['user'] = user.to_json()
+    return jsonify(success=is_authenticated)
+
 
 @app.route('/api/users', methods=['POST'])
 def create_user():
     data = request.form
     user = User(data.get("username"), data.get("password"))
-    result = db_manager.create_user(user)
+    result = User.create_user(user)
     return jsonify(success=result)
 
 @app.route('/')

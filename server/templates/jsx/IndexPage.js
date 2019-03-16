@@ -1,17 +1,19 @@
-class LoginPage extends React.Component {
+class IndexPage extends React.Component {
   render() {
-    return React.createElement("div", null, React.createElement(CreateUserPage, null));
+    return React.createElement("div", null, React.createElement(LoginPage, null));
   }
 
 }
 
-class CreateUserPage extends React.Component {
+class LoginPage extends React.Component {
   constructor(props) {
     super(props);
     this.state = {};
     this.handleOnUsernameChange = this.handleOnUsernameChange.bind(this);
     this.handleOnPasswordChange = this.handleOnPasswordChange.bind(this);
     this.handleOnLogin = this.handleOnLogin.bind(this);
+    this.handleOnCreateUser = this.handleOnCreateUser.bind(this);
+    this.displayLoginButton = this.displayLoginButton.bind(this);
   }
 
   handleOnUsernameChange(event) {
@@ -26,7 +28,7 @@ class CreateUserPage extends React.Component {
     });
   }
 
-  handleOnLogin(event) {
+  handleOnCreateUser(event) {
     let data = this.state;
     $.ajax({
       url: "/api/users",
@@ -34,12 +36,38 @@ class CreateUserPage extends React.Component {
       data: data,
       success: response => {
         if (response.success) {
-          alert("Sucessfully created user " + this.state.username);
+          alert("Successfully created user " + this.state.username);
         } else {
           alert("Failed to create user " + this.state.username);
         }
       }
     });
+  }
+
+  handleOnLogin() {
+    let data = this.state;
+    $.ajax({
+      url: "/api/users",
+      type: "GET",
+      data: data,
+      success: response => {
+        if (response.success) {
+          alert("Successfully Logged in! Welcome back " + this.state.username);
+        } else {
+          alert("Failed to login " + this.state.username);
+        }
+      }
+    });
+  }
+
+  displayLoginButton() {
+    return React.createElement("div", null, React.createElement("button", {
+      id: "btnCreateUser",
+      onClick: this.handleOnCreateUser
+    }, "Create New Account"), React.createElement("button", {
+      id: "btnLogin",
+      onClick: this.handleOnLogin
+    }, "Login"));
   }
 
   render() {
@@ -57,13 +85,10 @@ class CreateUserPage extends React.Component {
       className: "loginInput",
       type: "text",
       onChange: this.handleOnPasswordChange
-    })), React.createElement("button", {
-      id: "btnCreateUser",
-      onClick: this.handleOnLogin
-    }, "Create User"));
+    })), this.displayLoginButton());
   }
 
 }
 
-ReactDOM.render(React.createElement(LoginPage, null), document.getElementById("root")); // .\babel ..\..\LoginPage.jsx --out-file .
+ReactDOM.render(React.createElement(IndexPage, null), document.getElementById("root")); // .\babel ..\..\IndexPage.jsx --out-file .
 // .\..\test.js --presets=@babel/preset-react
