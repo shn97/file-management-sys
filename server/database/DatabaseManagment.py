@@ -1,4 +1,5 @@
 import sqlite3
+import hashlib
 from flask import g
 
 from server.models import User
@@ -44,10 +45,11 @@ class DatabaseManagement:
     def create_user(self, user: User):
         # TODO: Check if username and password is valid before create_user
         # TODO:  Check if user exists, return false and err msg
+        hashed_password = hashlib.sha256(user.password.encode("ascii")).hexdigest()
         query = "INSERT INTO users (username, password) VALUES (:username, :password);"
-        params = dict(username=user.username, password=user.password)
+        params = dict(username=user.username, password=hashed_password)
         result = self.execute_query(query, params)
-        if result is not None and result > 1:
+        if result is not None and result > 0:
             return True
         return False
 

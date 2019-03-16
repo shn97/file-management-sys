@@ -1,0 +1,13 @@
+.loginLabel {
+    margin: 5px;
+    display: inline-block;
+    width: 12ch;
+}
+
+.loginInput {
+    width: 30%;
+}
+
+#btnCreateUser {
+    margin-top: 15px;
+}
