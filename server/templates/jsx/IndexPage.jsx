@@ -1,3 +1,5 @@
+/*import PropTypes from 'prop-types';*/
+
 class IndexPage extends React.Component {
     constructor(props) {
         super(props);
@@ -29,6 +31,7 @@ class IndexPage extends React.Component {
                 </div>
                 <div style={{display : displayFileManagementPage}}>
                     <FileManagementPage
+                        isLoggedIn={this.state.isLoggedIn}
                         handleLogoutRedirect={this.handleLogoutRedirect}/>
                 </div>
             </div>
@@ -40,7 +43,10 @@ class LoginPage extends React.Component {
 
     constructor(props) {
         super(props);
-        this.state = {};
+        this.state = {
+            username: "",
+            password: ""
+        };
 
         this.handleOnUsernameChange = this.handleOnUsernameChange.bind(this);
         this.handleOnPasswordChange = this.handleOnPasswordChange.bind(this);
@@ -59,37 +65,45 @@ class LoginPage extends React.Component {
 
     handleOnCreateUser(event) {
         let data = this.state;
-
-        $.ajax({
-            url : "/api/users",
-            type : "POST",
-            data : data,
-            success : (response) => {
-                if (response.success) {
-                    alert("Successfully created user " + this.state.username)
-                } else {
-                    alert("Failed to create user " + this.state.username)
+        if (data.username !== "" && data.password !== "") {
+            $.ajax({
+                url : "/api/users",
+                type : "POST",
+                data : data,
+                success : (response) => {
+                    if (response.success) {
+                        alert("Successfully created user " + this.state.username)
+                    } else {
+                        alert("Failed to create user " + this.state.username)
+                    }
                 }
-            }
-        })
+            })
+        } else {
+            alert("Username and password fields cannot be empty!")
+        }
+
     }
 
     handleOnLogin() {
         let data = this.state;
 
-        $.ajax({
-            url: "/api/users",
-            type: "GET",
-            data: data,
-            success: (response) => {
-                if (response.success) {
-                    alert("Successfully Logged in! Welcome back " + this.state.username);
-                    this.props.handleLoginRedirect()
-                } else {
-                    alert("Failed to login " + this.state.username)
+        if (data.username !== "" && data.password !== "") {
+            $.ajax({
+                url: "/api/users",
+                type: "GET",
+                data: data,
+                success: (response) => {
+                    if (response.success) {
+                        alert("Successfully Logged in! Welcome back " + this.state.username);
+                        this.props.handleLoginRedirect()
+                    } else {
+                        alert("Failed to login " + this.state.username)
+                    }
                 }
-            }
-        })
+            })
+        } else {
+            alert("Username and password fields cannot be empty!")
+        }
     }
 
     handleUploadFile() {
@@ -132,9 +146,11 @@ class FileManagementPage extends React.Component {
 
     constructor(props) {
         super(props);
-        this.state = {};
+        this.state = {
+            selectedFile: null
+        };
 
-        this.handleOnLogout =this.handleOnLogout.bind(this)
+        this.handleOnLogout =this.handleOnLogout.bind(this);
     }
 
     handleOnLogout() {
@@ -153,13 +169,99 @@ class FileManagementPage extends React.Component {
     }
 
     render() {
+        let fileTree = [];
+        if (this.props.isLoggedIn) {
+            fileTree.push(
+                <File
+                    fileId={-1}
+                    fileName={""}/>)
+        }
+
         return (
             <div>
                 <div id="divTopBar">
-                    <button id="btnLogout" onClick={this.handleOnLogout}>Logout</button>
+                    <button id="btnLogout" className="btnTopBar"
+                            onClick={this.handleOnLogout}>Logout</button>
                 </div>
-                <div id="divFileTree">
+                <div id="divFileTreeContainer">
+                    {fileTree}
                 </div>
+            </div>
+        )
+    }
+}
+
+class File extends React.Component {
+/*    propTypes = {
+        fileId: PropTypes.number,
+        fileName: PropTypes.String,
+        getFiles: PropTypes.func
+    };*/
+
+    constructor(props) {
+        super(props);
+        this.state = {
+            fileId: this.props.fileId,
+            fileName: this.props.fileName,
+            isExpanded: false,
+            childrenFiles: []
+        };
+
+        this.getFiles = this.getFiles.bind(this);
+        this.handleOnClickFile = this.handleOnClickFile.bind(this);
+
+        if (this.state.fileId === -1) {
+             this.getFiles(this.state.fileId);
+        }
+    }
+
+    getFiles(parentId) {
+         let data = {
+             parentId : parentId
+         };
+         $.ajax({
+             url: "/api/files",
+             type: "GET",
+             data: data,
+             success: (response) => {
+                 if (response.success) {
+                     let files = response.data;
+                     if (parentId === -1) {
+                        this.setState({
+                            fileId: files[0].file_id,
+                            fileName: files[0].file_name
+                        });
+                     } else {
+                         let childrenFiles = [];
+                         files.forEach((child) => {
+                             childrenFiles.push(
+                                 <File
+                                     fileId={child.fileId}
+                                     filename={child.fileName}/>)
+                         });
+                         this.setState({childrenFiles: childrenFiles});
+                     }
+                 } else {
+                     alert("Failed to get files! Please re-login and try again");
+                 }
+             }
+         });
+    }
+
+    handleOnClickFile(event) {
+        let shouldExpand = !this.state.isExpanded;
+        this.handleGetFiles(shouldExpand, event.target.dataset.value);
+        this.setState({isExpanded: shouldExpand});
+    }
+
+    render() {
+        return (
+            <div>
+                <span className="fileNode"
+                      onClick={this.handleOnClickFile}
+                      data-value={this.state.fileId}>{this.state.fileName}
+                    {this.state.childrenFiles}
+                </span>
             </div>
         )
     }

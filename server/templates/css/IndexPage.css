@@ -12,7 +12,7 @@
     margin-top: 15px;
 }
 
-#btnLogout {
+.btnTopBar {
     float: right;
     font-size: 16px;
     cursor: pointer;
@@ -25,5 +25,13 @@
 }
 
 .fileNode {
-    padding-left: 0.5em;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    color: black;
+    background-color: lightskyblue;
+    padding: 5px 10px 5px 0.5em;
+    border: none;
+    border-radius: 8px;
+
 }

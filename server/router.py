@@ -1,7 +1,10 @@
 from flask import Flask, request, render_template, g, jsonify, send_from_directory, session, make_response
 
+from json import dumps
+
 from server.database.DatabaseManagment import DatabaseManagement
 from server.models.User import User
+from server.models.File import File
 import json
 
 app = Flask(__name__)
@@ -24,17 +27,40 @@ def login():
         session['user'] = user.to_json()
     return jsonify(success=is_authenticated)
 
+@app.route('/api/users', methods=['POST'])
+def create_user():
+    data = request.form
+    username, password = data.get("username"), data.get("password")
+    folder = File.create_user_root_folder(username)
+    user = User(username, password, folder.get_id())
+    result = User.create_user(user)
+    return jsonify(success=result)
+
 @app.route('/api/logout', methods=['GET'])
 def logout():
     session.pop('user')
     return jsonify(success=True)
 
-@app.route('/api/users', methods=['POST'])
-def create_user():
-    data = request.form
-    user = User(data.get("username"), data.get("password"))
-    result = User.create_user(user)
-    return jsonify(success=result)
+@app.route('/api/files', methods=['GET'])
+def get_files():
+    user = User.from_json(session['user'])
+    data = request.args
+    parent_id = int(data.get("parentId"))
+    success = False
+    files = []
+    if user is not None:
+        if parent_id == -1:
+            optional_file = File.get_file(user.get_root_folder_id())
+            if optional_file is not None:
+                files.append(optional_file)
+                success = True
+        else:
+            files = File.get_children_files(parent_id)
+            success = True
+
+    files_dict_list = [file.to_dict() for file in files]
+    return jsonify(success=success, data=files_dict_list)
+
 
 @app.route('/')
 def main_page():
