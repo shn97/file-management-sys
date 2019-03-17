@@ -93,9 +93,13 @@ def update_file_name():
 
     return jsonify(success=success)
 
+@app.route('/api/files', methods=['DELETE'])
+def delete_file():
+    data = request.form
+    file_id = int(data.get("file_id"))
+    success = File.delete_file(file_id)
 
-
-
+    return jsonify(success=success)
 
 @app.route('/')
 def main_page():

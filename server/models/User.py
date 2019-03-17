@@ -49,7 +49,7 @@ class User( ):
         query = "SELECT * FROM users WHERE username=:username AND password=:password;"
         params = dict(username=self.username, password=hashed_password)
 
-        results, row_id = User.db_manager.execute_query(query, params)
+        results, row_id, row_count = User.db_manager.execute_query(query, params)
 
         self._is_authenticated = results is not None and len(results) == 1
         if self._is_authenticated:
@@ -79,7 +79,7 @@ class User( ):
                 "VALUES (:username, :password, :root_folder_id);"
         params = dict(username=user.username, password=hashed_password,
                       root_folder_id=user._root_folder_id)
-        results, row_id = User.db_manager.execute_query(query, params)
+        results, row_id, row_count = User.db_manager.execute_query(query, params)
 
         if row_id is not None and row_id > 0:
             return True
@@ -89,7 +89,7 @@ class User( ):
     def get_user(username: str) -> Optional["User"]:
         query = "SELECT * FROM users WHERE username=:username;"
         params = dict(username=username)
-        results, row_id = User.db_manager.execute_query(query, params)
+        results, row_id, row_count = User.db_manager.execute_query(query, params)
 
         if results is not None and len(results) == 1:
             id, username, password, root_folder_id = results[0]

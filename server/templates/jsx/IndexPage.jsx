@@ -140,6 +140,7 @@ class FileManagementPage extends React.Component {
         super(props);
         this.state = {
             selectedFileInfo: null,
+            deleteFileInfo: null,
             uploadProgress: 0,
             showCreateFolderDialog: false
         };
@@ -147,6 +148,7 @@ class FileManagementPage extends React.Component {
         this.fileUpload = React.createRef();
         this.handleOnClickUpload = this.handleOnClickUpload.bind(this);
         this.handleUploadFile = this.handleUploadFile.bind(this);
+        this.handleOnDeleteFile = this.handleOnDeleteFile.bind(this);
         this.handleOnClickCreateFolder = this.handleOnClickCreateFolder.bind(this);
         this.handleOnLogout = this.handleOnLogout.bind(this);
         this.handleOnSelectFile = this.handleOnSelectFile.bind(this);
@@ -179,6 +181,7 @@ class FileManagementPage extends React.Component {
                     this.setState({uploadProgress: uploadProgress});
                 }
             }).then((response) => {
+                data = response.data;
                 if (!response.success) {
                     alert("Failed to upload File: " + response.msg);
                 }
@@ -186,8 +189,45 @@ class FileManagementPage extends React.Component {
         }
     }
 
+    handleOnDeleteFile() {
+        if (this.state.selectedFileInfo.fileId != null) {
+            let data = {
+                file_id: this.state.selectedFileInfo.fileId
+            };
+
+            $.ajax({
+                url: "/api/files",
+                data: data,
+                type: "DELETE",
+                success: (response) => {
+                    if (response.success) {
+                        this.setState({deleteFileInfo : this.state.selectedFileInfo});
+                    } else {
+                        alert("Failed to delete file\"" + this.state.selectedFileInfo.fileName + "\"")
+                    }
+                }
+            })
+        }
+    }
+
+    handleOnRemoveFileFromTree() {
+        selectedFileInfo
+    }
+
+    isDeleted(fileId) {
+        return this.state.deleteFileInfo && this.state.deletefileInfo.fileId == fileId;
+    }
+
     handleOnClickCreateFolder(shouldShowDialog) {
         this.setState({showCreateFolderDialog : shouldShowDialog})
+    }
+
+    handleOnSelectFile(fileInfo) {
+        this.setState({selectedFileInfo: fileInfo});
+    }
+
+    isSelected(fileId) {
+        return this.state.selectedFileInfo && this.state.selectedFileInfo.fileId === fileId
     }
 
     handleOnLogout() {
@@ -205,18 +245,14 @@ class FileManagementPage extends React.Component {
         })
     }
 
-    handleOnSelectFile(fileInfo) {
-        this.setState({selectedFileInfo: fileInfo});
-    }
 
-    isSelected(fileId) {
-        return this.state.selectedFileInfo && this.state.selectedFileInfo.fileId === fileId
-    }
 
     render() {
         let isAnyFileSelected = this.state.selectedFileInfo && this.state.selectedFileInfo.fileId > 0
         let displayFolderOnlyButtons =  isAnyFileSelected && this.state.selectedFileInfo.isFolder
                                           ? "" : "none";
+        let displayDeleteButton = isAnyFileSelected && !this.state.selectedFileInfo.isFolder
+                                    ? "" : "none";
         let fileTree = [];
         if (this.props.isLoggedIn) {
             fileTree.push(
@@ -226,7 +262,9 @@ class FileManagementPage extends React.Component {
                     isFolder={true}
                     isExpanded={false}
                     isSelected={this.isSelected}
-                    handleOnSelectFile={this.handleOnSelectFile}/>)
+                    isDelete={this.isDeleted}
+                    handleOnSelectFile={this.handleOnSelectFile}
+                    handleOnRemoveFileFromTree={this.handlOnRemoveFileFromTree}/>)
         }
 
         return (
@@ -235,6 +273,9 @@ class FileManagementPage extends React.Component {
                     <button id="btnUploadFile" className="btnTopBar"
                             style={{display: displayFolderOnlyButtons}}
                             onClick={this.handleOnClickUpload}>Upload File</button>
+                    <button id="btnDeleteFile" className="btnTopBar"
+                            style={{display: displayDeleteButton }}
+                            onClick={this.handleOnDeleteFile}>Delete File</button>
                     <button id="btnCreateFolder" className="btnTopBar"
                             style={{display: displayFolderOnlyButtons}}
                             onClick={this.handleOnClickCreateFolder}>Create Folder</button>
@@ -266,6 +307,7 @@ class File extends React.Component {
         this.state = {
             fileId: this.props.fileId,
             fileName: this.props.fileName,
+            isRoot: false,
             isExpanded: this.props.isExpanded,
             isSelected: false,
             childrenFiles: []
@@ -294,7 +336,8 @@ class File extends React.Component {
                      if (parentId === -1) {
                         this.setState({
                             fileId: files[0].file_id,
-                            fileName: files[0].file_name
+                            fileName: files[0].file_name,
+                            isRoot: true
                         });
                      } else {
                          let childrenFiles = [];
@@ -327,12 +370,14 @@ class File extends React.Component {
         if (shouldExpand) {
              fileInfo = {
                 fileId: this.state.fileId,
-                isFolder: this.props.isFolder
+                isFolder: this.props.isFolder,
+                isRoot: this.state.isRoot
             };
         } else {
             fileInfo = {
                 fileId: null,
-                isFolder: null
+                isFolder: null,
+                isRoot: null
              };
         }
 
@@ -368,7 +413,8 @@ class File extends React.Component {
 
         let fileInfo = {
                 fileId: this.state.fileId,
-                isFolder: this.props.isFolder
+                isFolder: this.props.isFolder,
+                isRoot : this.state.isRoot
         };
         this.props.handleOnSelectFile(fileInfo);
     }
@@ -383,7 +429,6 @@ class File extends React.Component {
             <div className="fileNodeContainer">
                 <input className={fileNodeClass}
                        type="text"
-                       val={this.state.fileName}
                        defaultValue={this.state.fileName}
                        onClick={this.handleOnClickFile}
                        onBlur={this.handleOnBlur}>
@@ -399,5 +444,5 @@ ReactDOM.render(
     document.getElementById("root")
 );
 
-// .\babel ..\..\IndexPage.jsx --out-file .
+// .\babel ..\..\ --out-file .
 // .\..\test.js --presets=@babel/preset-react

@@ -146,12 +146,14 @@ class FileManagementPage extends React.Component {
     super(props);
     this.state = {
       selectedFileInfo: null,
+      deleteFileInfo: null,
       uploadProgress: 0,
       showCreateFolderDialog: false
     };
     this.fileUpload = React.createRef();
     this.handleOnClickUpload = this.handleOnClickUpload.bind(this);
     this.handleUploadFile = this.handleUploadFile.bind(this);
+    this.handleOnDeleteFile = this.handleOnDeleteFile.bind(this);
     this.handleOnClickCreateFolder = this.handleOnClickCreateFolder.bind(this);
     this.handleOnLogout = this.handleOnLogout.bind(this);
     this.handleOnSelectFile = this.handleOnSelectFile.bind(this);
@@ -188,6 +190,8 @@ class FileManagementPage extends React.Component {
           });
         }
       }).then(response => {
+        data = response.data;
+
         if (!response.success) {
           alert("Failed to upload File: " + response.msg);
         }
@@ -195,10 +199,50 @@ class FileManagementPage extends React.Component {
     }
   }
 
+  handleOnDeleteFile() {
+    if (this.state.selectedFileInfo.fileId != null) {
+      let data = {
+        file_id: this.state.selectedFileInfo.fileId
+      };
+      $.ajax({
+        url: "/api/files",
+        data: data,
+        type: "DELETE",
+        success: response => {
+          if (response.success) {
+            this.setState({
+              deleteFileInfo: this.state.selectedFileInfo
+            });
+          } else {
+            alert("Failed to delete file\"" + this.state.selectedFileInfo.fileName + "\"");
+          }
+        }
+      });
+    }
+  }
+
+  handleOnRemoveFileFromTree() {
+    selectedFileInfo;
+  }
+
+  isDeleted(fileId) {
+    return this.state.deleteFileInfo && this.state.deletefileInfo.fileId == fileId;
+  }
+
   handleOnClickCreateFolder(shouldShowDialog) {
     this.setState({
       showCreateFolderDialog: shouldShowDialog
     });
+  }
+
+  handleOnSelectFile(fileInfo) {
+    this.setState({
+      selectedFileInfo: fileInfo
+    });
+  }
+
+  isSelected(fileId) {
+    return this.state.selectedFileInfo && this.state.selectedFileInfo.fileId === fileId;
   }
 
   handleOnLogout() {
@@ -216,18 +260,10 @@ class FileManagementPage extends React.Component {
     });
   }
 
-  handleOnSelectFile(fileInfo) {
-    this.setState({
-      selectedFileInfo: fileInfo
-    });
-  }
-
-  isSelected(fileId) {
-    return this.state.selectedFileInfo && this.state.selectedFileInfo.fileId === fileId;
-  }
-
   render() {
-    let shouldDisplayButtons = this.state.selectedFileInfo && this.state.selectedFileInfo.isFolder && this.state.selectedFileInfo.fileId > 0 ? "" : "none";
+    let isAnyFileSelected = this.state.selectedFileInfo && this.state.selectedFileInfo.fileId > 0;
+    let displayFolderOnlyButtons = isAnyFileSelected && this.state.selectedFileInfo.isFolder ? "" : "none";
+    let displayDeleteButton = isAnyFileSelected && !this.state.selectedFileInfo.isFolder ? "" : "none";
     let fileTree = [];
 
     if (this.props.isLoggedIn) {
@@ -237,7 +273,9 @@ class FileManagementPage extends React.Component {
         isFolder: true,
         isExpanded: false,
         isSelected: this.isSelected,
-        handleOnSelectFile: this.handleOnSelectFile
+        isDelete: this.isDeleted,
+        handleOnSelectFile: this.handleOnSelectFile,
+        handleOnRemoveFileFromTree: this.handlOnRemoveFileFromTree
       }));
     }
 
@@ -248,14 +286,21 @@ class FileManagementPage extends React.Component {
       id: "btnUploadFile",
       className: "btnTopBar",
       style: {
-        display: shouldDisplayButtons
+        display: displayFolderOnlyButtons
       },
       onClick: this.handleOnClickUpload
     }, "Upload File"), React.createElement("button", {
+      id: "btnDeleteFile",
+      className: "btnTopBar",
+      style: {
+        display: displayDeleteButton
+      },
+      onClick: this.handleOnDeleteFile
+    }, "Delete File"), React.createElement("button", {
       id: "btnCreateFolder",
       className: "btnTopBar",
       style: {
-        display: shouldDisplayButtons
+        display: displayFolderOnlyButtons
       },
       onClick: this.handleOnClickCreateFolder
     }, "Create Folder"), React.createElement("button", {
@@ -288,12 +333,14 @@ class File extends React.Component {
     this.state = {
       fileId: this.props.fileId,
       fileName: this.props.fileName,
+      isRoot: false,
       isExpanded: this.props.isExpanded,
       isSelected: false,
       childrenFiles: []
     };
     this.getFiles = this.getFiles.bind(this);
     this.handleOnClickFile = this.handleOnClickFile.bind(this);
+    this.handleOnBlur = this.handleOnBlur.bind(this);
 
     if (this.state.fileId === -1) {
       this.getFiles(this.state.fileId);
@@ -315,7 +362,8 @@ class File extends React.Component {
           if (parentId === -1) {
             this.setState({
               fileId: files[0].file_id,
-              fileName: files[0].file_name
+              fileName: files[0].file_name,
+              isRoot: true
             });
           } else {
             let childrenFiles = [];
@@ -351,12 +399,14 @@ class File extends React.Component {
     if (shouldExpand) {
       fileInfo = {
         fileId: this.state.fileId,
-        isFolder: this.props.isFolder
+        isFolder: this.props.isFolder,
+        isRoot: this.state.isRoot
       };
     } else {
       fileInfo = {
         fileId: null,
-        isFolder: null
+        isFolder: null,
+        isRoot: null
       };
     }
 
@@ -368,12 +418,16 @@ class File extends React.Component {
 
   handleOnBlur(event) {
     let new_file_name = event.target.value;
+
+    if (new_file_name === "") {
       alert("File name cannot be empty!");
       return;
     }
 
     let data = {
       file_id: this.state.fileId,
+      new_file_name: new_file_name
+    };
 
     if (new_file_name !== this.state.fileName) {
       $.ajax({
@@ -381,6 +435,7 @@ class File extends React.Component {
         type: "PUT",
         data: data,
         success: response => {
+          if (response.success) {
             this.setState({
               fileName: new_file_name
             });
@@ -393,7 +448,8 @@ class File extends React.Component {
 
     let fileInfo = {
       fileId: this.state.fileId,
-      isFolder: this.props.isFolder
+      isFolder: this.props.isFolder,
+      isRoot: this.state.isRoot
     };
     this.props.handleOnSelectFile(fileInfo);
   }
@@ -408,7 +464,6 @@ class File extends React.Component {
     }, React.createElement("input", {
       className: fileNodeClass,
       type: "text",
-      val: this.state.fileName,
       defaultValue: this.state.fileName,
       onClick: this.handleOnClickFile,
       onBlur: this.handleOnBlur
@@ -417,5 +472,5 @@ class File extends React.Component {
 
 }
 
-ReactDOM.render(React.createElement(IndexPage, null), document.getElementById("root")); // .\babel ..\..\IndexPage.jsx --out-file .
+ReactDOM.render(React.createElement(IndexPage, null), document.getElementById("root")); // .\babel ..\..\ --out-file .
 // .\..\test.js --presets=@babel/preset-react

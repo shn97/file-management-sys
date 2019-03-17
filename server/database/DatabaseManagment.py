@@ -26,7 +26,7 @@ class DatabaseManagement:
             cur = conn.cursor()
             cur.execute(query, parameters)
             conn.commit()
-            result = cur.fetchall(), cur.lastrowid
+            result = cur.fetchall(), cur.lastrowid, cur.rowcount
         except sqlite3.Error as e:
             print(e)
         finally:

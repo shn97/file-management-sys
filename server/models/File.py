@@ -1,4 +1,5 @@
 import uuid
+import os
 from typing import Optional, Union, List
 from server.database.DatabaseManagment import DatabaseManagement
 
@@ -57,7 +58,7 @@ class File:
             query = "SELECT id FROM files " \
                     "WHERE file_key=:file_key GROUP BY file_key;"
             params = dict(file_key=file_key)
-            results, row_id = File.db_manager.execute_query(query, params)
+            results, row_id, row_count = File.db_manager.execute_query(query, params)
             if results is not None and len(results) > 0:
                 return True
         return False
@@ -68,7 +69,7 @@ class File:
             query = "SELECT * FROM files " \
                     "WHERE id=-1 AND file_name=:file_name;"
             params = dict(file_name=file_name)
-            results, row_id = File.db_manager.execute_query(query, params)
+            results, row_id, row_count = File.db_manager.execute_query(query, params)
             if results is not None and len(results) > 0:
                 return True
         return False
@@ -87,7 +88,7 @@ class File:
         if not File.check_user_root_folder_exists(file_name):
             query = "INSERT INTO files (file_name) VALUES (:file_name);"
             params = dict(file_name=file_name)
-            results, row_id = File.db_manager.execute_query(query, params)
+            results, row_id, row_count = File.db_manager.execute_query(query, params)
 
             if row_id is not None and row_id > 0:
                 root_folder = File(file_name)
@@ -99,7 +100,7 @@ class File:
     def get_file(file_id: int) -> Optional["File"]:
         query = "SELECT * FROM files WHERE id=:file_id;"
         params = dict(file_id=file_id)
-        results, row_id = File.db_manager.execute_query(query, params)
+        results, row_id, row_count = File.db_manager.execute_query(query, params)
         if results is not None and len(results) == 1:
             file_id, parent_id, file_name, file_key = results[0]
             file = File()
@@ -115,16 +116,17 @@ class File:
     def get_children_files(parent_id: int) -> List["File"]:
         query = "SELECT * FROM files f WHERE parent_id=:parent_id"
         params = dict(parent_id=parent_id)
-        results, row_id = File.db_manager.execute_query(query, params)
+        results, row_id, row_count = File.db_manager.execute_query(query, params)
         files = list()
-        if results is not None and len(results) == 1:
-            file_id, parent_id, file_name, file_key = results[0]
-            file = File()
-            file.set_id(file_id)
-            file.set_parent_id(parent_id)
-            file.set_file_name(file_name)
-            file.set_file_key(file_key)
-            files.append(file)
+        if results is not None and len(results) > 0:
+            for result in results:
+                file_id, parent_id, file_name, file_key = result
+                file = File()
+                file.set_id(file_id)
+                file.set_parent_id(parent_id)
+                file.set_file_name(file_name)
+                file.set_file_key(file_key)
+                files.append(file)
         return files
 
     @staticmethod
@@ -134,12 +136,11 @@ class File:
         else:
             file_key = File.generate_unique_file_key()
 
-
         query = "INSERT INTO files (parent_id, file_name, file_key) " \
                 "VALUES (:parent_id, :file_name, :file_key);"
         params = dict(file_name=file_name, parent_id=parent_id, file_key=file_key)
 
-        results, row_id = File.db_manager.execute_query(query, params)
+        results, row_id, row_count = File.db_manager.execute_query(query, params)
 
         if row_id is not None and row_id > 0:
             new_file = File(file_name)
@@ -155,11 +156,34 @@ class File:
         query = "UPDATE files SET file_name=:new_file_name " \
                 "WHERE id=:file_id;"
         params = dict(file_id=file_id, new_file_name=new_file_name)
-        results, row_id = File.db_manager.execute_query(query, params)
+        results, row_id, row_count = File.db_manager.execute_query(query, params)
 
-        return True
+        if row_count is not None and row_count == 1:
+            return True
+        return False
 
+    @staticmethod
+    def delete_file(file_id: int) -> bool:
+        file = File.get_file(file_id)
+        if file is not None and File.delete_file_from_disk(file.get_file_key()):
+            query = "DELETE FROM files WHERE id=:file_id;"
+            params = dict(file_id=file_id)
+            results, row_id, row_count = File.db_manager.execute_query(query, params)
 
+            if row_count is not None and row_count == 1:
+                return True
+        return False
 
+    @staticmethod
+    def delete_file_from_disk(file_key: str) -> bool:
+        file_path = os.path.join(File.FILES_DIR, file_key)
+        try:
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
+            # elif os.path.isdir(file_path): shutil.rmtree(file_path)
+            return True
+        except Exception as e:
+            print(e)
+        return False
 
 
