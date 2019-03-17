@@ -80,8 +80,7 @@ def upload_file():
             else:
                 # TODO: Add  file type/extension check
                 filename = secure_filename(file.filename)
-                file.save(os.path.join(UPLOAD_DIR, filename))
-                File.add_file(parent_id, filename, False)
+                File.add_file(file, parent_id, filename, False)
                 success = True
     return jsonify(success=success, msg=msg)
 
@@ -101,9 +100,24 @@ def delete_file():
 
     return jsonify(success=success)
 
+@app.route('/api/download', methods=['POST'])
+def get_download_file():
+    data = request.form
+    file_id = int(data.get("file_id"))
+    abs_dir_path = os.path.join(app.root_path, File.FILES_DIR)
+    file_key = ""
+    file_name = ""
+    optional_file = File.get_file(file_id)
+    if optional_file is not None:
+        file_key = optional_file.get_file_key()
+        file_name = optional_file.get_file_name()
+
+    return send_from_directory(abs_dir_path, file_key,
+                               as_attachment=True, attachment_filename=file_name)
+
 @app.route('/')
 def main_page():
-    return send_from_directory('templates','index.html')
+    return send_from_directory('templates', 'index.html')
 
 @app.route('/templates/jsx/<path>')
 def add_js_file(path):

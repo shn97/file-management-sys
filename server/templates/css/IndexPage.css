@@ -51,3 +51,7 @@
 .fileNode.selected {
     border: black solid 1px;
 }
+
+.formDownload {
+    display: inline;
+}

@@ -192,7 +192,7 @@ class FileManagementPage extends React.Component {
       }).then(response => {
         data = response.data;
 
-        if (!response.success) {
+        if (!data.success) {
           alert("Failed to upload File: " + response.msg);
         }
       });
@@ -221,12 +221,8 @@ class FileManagementPage extends React.Component {
     }
   }
 
-  handleOnRemoveFileFromTree() {
-    selectedFileInfo;
-  }
-
   isDeleted(fileId) {
-    return this.state.deleteFileInfo && this.state.deletefileInfo.fileId == fileId;
+    return this.state.deleteFileInfo && this.state.deleteFileInfo.fileId === fileId;
   }
 
   handleOnClickCreateFolder(shouldShowDialog) {
@@ -262,6 +258,7 @@ class FileManagementPage extends React.Component {
 
   render() {
     let isAnyFileSelected = this.state.selectedFileInfo && this.state.selectedFileInfo.fileId > 0;
+    let displayIfFileSelected = isAnyFileSelected && !this.state.selectedFileInfo.isFolder ? "" : "none";
     let displayFolderOnlyButtons = isAnyFileSelected && this.state.selectedFileInfo.isFolder ? "" : "none";
     let displayDeleteButton = isAnyFileSelected && !this.state.selectedFileInfo.isFolder ? "" : "none";
     let fileTree = [];
@@ -274,8 +271,7 @@ class FileManagementPage extends React.Component {
         isExpanded: false,
         isSelected: this.isSelected,
         isDelete: this.isDeleted,
-        handleOnSelectFile: this.handleOnSelectFile,
-        handleOnRemoveFileFromTree: this.handlOnRemoveFileFromTree
+        handleOnSelectFile: this.handleOnSelectFile
       }));
     }
 
@@ -303,7 +299,25 @@ class FileManagementPage extends React.Component {
         display: displayFolderOnlyButtons
       },
       onClick: this.handleOnClickCreateFolder
-    }, "Create Folder"), React.createElement("button", {
+    }, "Create Folder"), React.createElement("form", {
+      className: "formDownload",
+      action: "/api/download",
+      method: "POST"
+    }, React.createElement("input", {
+      type: "text",
+      name: "file_id",
+      style: {
+        display: "none"
+      },
+      value: this.state.selectedFileInfo ? this.state.selectedFileInfo.fileId : -1
+    }), React.createElement("button", {
+      id: "btnDownloadFile",
+      className: "btnTopBar",
+      style: {
+        display: displayIfFileSelected
+      },
+      type: "submit"
+    }, "Download File")), React.createElement("button", {
       id: "btnLogout",
       className: "btnTopBar",
       onClick: this.handleOnLogout
@@ -374,6 +388,7 @@ class File extends React.Component {
                 isFolder: child.is_folder,
                 isExpanded: this.state.isExpanded,
                 isSelected: this.props.isSelected,
+                isDelete: this.isDeleted,
                 handleOnSelectFile: this.props.handleOnSelectFile
               }));
             });
