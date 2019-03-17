@@ -366,6 +366,38 @@ class File extends React.Component {
     });
   }
 
+  handleOnBlur(event) {
+    let new_file_name = event.target.value;
+      alert("File name cannot be empty!");
+      return;
+    }
+
+    let data = {
+      file_id: this.state.fileId,
+
+    if (new_file_name !== this.state.fileName) {
+      $.ajax({
+        url: "/api/files",
+        type: "PUT",
+        data: data,
+        success: response => {
+            this.setState({
+              fileName: new_file_name
+            });
+          } else {
+            alert("Failed to update file name!");
+          }
+        }
+      });
+    }
+
+    let fileInfo = {
+      fileId: this.state.fileId,
+      isFolder: this.props.isFolder
+    };
+    this.props.handleOnSelectFile(fileInfo);
+  }
+
   render() {
     this.state.isSelected = this.props.isSelected(this.state.fileId);
     let fileNodeClass = "fileNode";
@@ -373,10 +405,14 @@ class File extends React.Component {
     let childrenFileNodes = this.state.isExpanded ? this.state.childrenFiles : [];
     return React.createElement("div", {
       className: "fileNodeContainer"
-    }, React.createElement("span", {
+    }, React.createElement("input", {
       className: fileNodeClass,
-      onClick: this.handleOnClickFile
-    }, this.state.fileName), childrenFileNodes);
+      type: "text",
+      val: this.state.fileName,
+      defaultValue: this.state.fileName,
+      onClick: this.handleOnClickFile,
+      onBlur: this.handleOnBlur
+    }), childrenFileNodes);
   }
 
 }

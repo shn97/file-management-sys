@@ -150,6 +150,16 @@ class File:
             return new_file
         return None
 
+    @staticmethod
+    def update_file_name(file_id: int, new_file_name: str) -> bool:
+        query = "UPDATE files SET file_name=:new_file_name " \
+                "WHERE id=:file_id;"
+        params = dict(file_id=file_id, new_file_name=new_file_name)
+        results, row_id = File.db_manager.execute_query(query, params)
+
+        return True
+
+
 
 
 

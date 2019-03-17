@@ -85,6 +85,16 @@ def upload_file():
                 success = True
     return jsonify(success=success, msg=msg)
 
+@app.route('/api/files', methods=['PUT'])
+def update_file_name():
+    data = request.form
+    file_id, new_file_name = int(data.get("file_id")), data.get("new_file_name")
+    success = File.update_file_name(file_id, new_file_name)
+
+    return jsonify(success=success)
+
+
+
 
 
 @app.route('/')

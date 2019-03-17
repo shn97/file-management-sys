@@ -214,8 +214,9 @@ class FileManagementPage extends React.Component {
     }
 
     render() {
-        let shouldDisplayButtons = this.state.selectedFileInfo && this.state.selectedFileInfo.isFolder &&
-                                    this.state.selectedFileInfo.fileId > 0 ? "" : "none";
+        let isAnyFileSelected = this.state.selectedFileInfo && this.state.selectedFileInfo.fileId > 0
+        let displayFolderOnlyButtons =  isAnyFileSelected && this.state.selectedFileInfo.isFolder
+                                          ? "" : "none";
         let fileTree = [];
         if (this.props.isLoggedIn) {
             fileTree.push(
@@ -232,10 +233,10 @@ class FileManagementPage extends React.Component {
             <div>
                 <div id="divTopBar" className="topBar">
                     <button id="btnUploadFile" className="btnTopBar"
-                            style={{display: shouldDisplayButtons}}
+                            style={{display: displayFolderOnlyButtons}}
                             onClick={this.handleOnClickUpload}>Upload File</button>
                     <button id="btnCreateFolder" className="btnTopBar"
-                            style={{display: shouldDisplayButtons}}
+                            style={{display: displayFolderOnlyButtons}}
                             onClick={this.handleOnClickCreateFolder}>Create Folder</button>
                     <button id="btnLogout" className="btnTopBar"
                             onClick={this.handleOnLogout}>Logout</button>
@@ -272,6 +273,7 @@ class File extends React.Component {
 
         this.getFiles = this.getFiles.bind(this);
         this.handleOnClickFile = this.handleOnClickFile.bind(this);
+        this.handleOnBlur = this.handleOnBlur.bind(this);
 
         if (this.state.fileId === -1) {
              this.getFiles(this.state.fileId);
@@ -338,6 +340,39 @@ class File extends React.Component {
         this.setState({isExpanded: shouldExpand});
     }
 
+    handleOnBlur(event) {
+        let new_file_name = event.target.value;
+        if (new_file_name === "") {
+            alert("File name cannot be empty!");
+            return
+        }
+
+        let data = {
+            file_id : this.state.fileId,
+            new_file_name : new_file_name
+        };
+        if (new_file_name !== this.state.fileName) {
+            $.ajax({
+                url: "/api/files",
+                type: "PUT",
+                data: data,
+                success: (response) => {
+                    if (response.success) {
+                        this.setState({fileName : new_file_name})
+                    } else {
+                        alert("Failed to update file name!")
+                    }
+                }
+            })
+        }
+
+        let fileInfo = {
+                fileId: this.state.fileId,
+                isFolder: this.props.isFolder
+        };
+        this.props.handleOnSelectFile(fileInfo);
+    }
+
     render() {
         this.state.isSelected = this.props.isSelected(this.state.fileId);
         let fileNodeClass = "fileNode";
@@ -346,9 +381,13 @@ class File extends React.Component {
 
         return (
             <div className="fileNodeContainer">
-                <span className={fileNodeClass}
-                      onClick={this.handleOnClickFile}>{this.state.fileName}
-                </span>
+                <input className={fileNodeClass}
+                       type="text"
+                       val={this.state.fileName}
+                       defaultValue={this.state.fileName}
+                       onClick={this.handleOnClickFile}
+                       onBlur={this.handleOnBlur}>
+                </input>
                 {childrenFileNodes}
             </div>
         )
