@@ -72,7 +72,7 @@ class LoginPage extends React.Component {
                 data : data,
                 success : (response) => {
                     if (response.success) {
-                        alert("Successfully created user " + this.state.username)
+                        alert("Successfully created user! You can now login ")
                     } else {
                         alert("Failed to create user " + this.state.username)
                     }
@@ -94,10 +94,9 @@ class LoginPage extends React.Component {
                 data: data,
                 success: (response) => {
                     if (response.success) {
-                        alert("Successfully Logged in! Welcome back " + this.state.username);
                         this.props.handleLoginRedirect()
                     } else {
-                        alert("Failed to login " + this.state.username)
+                        alert("Failed to login to " + this.state.username)
                     }
                 }
             })
@@ -109,15 +108,19 @@ class LoginPage extends React.Component {
     displayLoginButton() {
         return (
             <div>
-                <button id="btnCreateUser" onClick={this.handleOnCreateUser}>Create New Account</button>
-                <button id="btnLogin" onClick={this.handleOnLogin}>Login</button>
+                <button id="btnCreateUser"
+                        className="btnLogin"
+                        onClick={this.handleOnCreateUser}>Create New Account</button>
+                <button id="btnLogin"
+                        className="btnLogin"
+                        onClick={this.handleOnLogin}>Login</button>
             </div>
         )
     }
 
     render() {
         return (
-            <div>
+            <div className="loginContainer">
                 <div>
                     <label className="loginLabel">Username: </label>
                     <input id="inpUsername" className="loginInput"

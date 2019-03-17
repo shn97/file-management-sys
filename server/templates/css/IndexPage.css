@@ -1,15 +1,35 @@
+.loginContainer {
+    text-align: center;
+    margin-top: 15%;
+}
+
+.loginInnerContainer {
+    display: inline-block;
+}
+
 .loginLabel {
+    font-size: 20px;
     margin: 5px;
     display: inline-block;
     width: 12ch;
 }
 
 .loginInput {
-    width: 30%;
+    font-size: 18px;
+    margin: 5px;
+    width: 20%;
 }
 
-#btnLogin {
-    margin-top: 15px;
+.btnLogin {
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    color: floralwhite;
+    background-color: #808080;
+    padding: 10px 20px 10px 20px;
+    margin: 8px;
+    border: none;
+    border-radius: 10px;
 }
 
 .topBar {
