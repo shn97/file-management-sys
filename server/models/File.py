@@ -1,10 +1,10 @@
 import uuid
 import os
-from typing import Optional, Union, List
+from typing import Optional, List
 from server.database.DatabaseManagment import DatabaseManagement
 
 class File:
-    FILES_DIR = "./server/files/"
+    FILES_DIR = "./files"
     ROOT_FOLDER_PREFIX = "root_"
     db_manager = DatabaseManagement()
 
@@ -37,13 +37,6 @@ class File:
 
     def set_file_name(self, file_name):
         self._file_name = file_name
-
-    def upload (self):
-        if self._file_name is not None:
-            return
-
-    def create_folder (self, folder_name):
-        return
 
     def to_dict(self):
         return dict(
@@ -97,6 +90,10 @@ class File:
         return None
 
     @staticmethod
+    def create_folder():
+        return
+
+    @staticmethod
     def get_file(file_id: int) -> Optional["File"]:
         query = "SELECT * FROM files WHERE id=:file_id;"
         params = dict(file_id=file_id)
@@ -130,25 +127,26 @@ class File:
         return files
 
     @staticmethod
-    def add_file(parent_id: int, file_name: str, is_folder: bool) -> Optional["File"]:
+    def add_file(file, parent_id: int, file_name: str, is_folder: bool) -> Optional["File"]:
         if is_folder:
             file_key = None
         else:
             file_key = File.generate_unique_file_key()
 
-        query = "INSERT INTO files (parent_id, file_name, file_key) " \
-                "VALUES (:parent_id, :file_name, :file_key);"
-        params = dict(file_name=file_name, parent_id=parent_id, file_key=file_key)
+        if File.save_file_to_disk(file, file_key):
+            query = "INSERT INTO files (parent_id, file_name, file_key) " \
+                    "VALUES (:parent_id, :file_name, :file_key);"
+            params = dict(file_name=file_name, parent_id=parent_id, file_key=file_key)
 
-        results, row_id, row_count = File.db_manager.execute_query(query, params)
+            results, row_id, row_count = File.db_manager.execute_query(query, params)
 
-        if row_id is not None and row_id > 0:
-            new_file = File(file_name)
-            new_file.set_id(row_id)
-            new_file.set_parent_id(parent_id)
-            new_file.set_file_name(file_name)
-            new_file.set_file_key(file_key)
-            return new_file
+            if row_id is not None and row_id > 0:
+                new_file = File(file_name)
+                new_file.set_id(row_id)
+                new_file.set_parent_id(parent_id)
+                new_file.set_file_name(file_name)
+                new_file.set_file_key(file_key)
+                return new_file
         return None
 
     @staticmethod
@@ -175,13 +173,22 @@ class File:
         return False
 
     @staticmethod
+    def save_file_to_disk(file, file_key: str) -> bool:
+        try:
+            file.save(os.path.join(File.FILES_DIR, file_key))
+            return True
+        except Exception as e:
+            print(e)
+        return False
+
+    @staticmethod
     def delete_file_from_disk(file_key: str) -> bool:
         file_path = os.path.join(File.FILES_DIR, file_key)
         try:
             if os.path.isfile(file_path):
                 os.unlink(file_path)
+                return True
             # elif os.path.isdir(file_path): shutil.rmtree(file_path)
-            return True
         except Exception as e:
             print(e)
         return False
