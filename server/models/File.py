@@ -3,7 +3,7 @@ from typing import Optional, Union, List
 from server.database.DatabaseManagment import DatabaseManagement
 
 class File:
-    FILES_DIR = "/server/files/"
+    FILES_DIR = "./server/files/"
     ROOT_FOLDER_PREFIX = "root_"
     db_manager = DatabaseManagement()
 
@@ -47,17 +47,18 @@ class File:
     def to_dict(self):
         return dict(
             file_id=self._id,
-            file_name=self._file_name
+            file_name=self._file_name,
+            is_folder=self._file_key is None
         )
 
     @staticmethod
     def check_file_key_exists(file_key: str) -> bool:
         if file_key is not None:
-            query = "SELECT COUNT(*) FROM files " \
+            query = "SELECT id FROM files " \
                     "WHERE file_key=:file_key GROUP BY file_key;"
             params = dict(file_key=file_key)
             results, row_id = File.db_manager.execute_query(query, params)
-            if results is not None and results[0][0]  > 0:
+            if results is not None and len(results) > 0:
                 return True
         return False
 
@@ -125,6 +126,29 @@ class File:
             file.set_file_key(file_key)
             files.append(file)
         return files
+
+    @staticmethod
+    def add_file(parent_id: int, file_name: str, is_folder: bool) -> Optional["File"]:
+        if is_folder:
+            file_key = None
+        else:
+            file_key = File.generate_unique_file_key()
+
+
+        query = "INSERT INTO files (parent_id, file_name, file_key) " \
+                "VALUES (:parent_id, :file_name, :file_key);"
+        params = dict(file_name=file_name, parent_id=parent_id, file_key=file_key)
+
+        results, row_id = File.db_manager.execute_query(query, params)
+
+        if row_id is not None and row_id > 0:
+            new_file = File(file_name)
+            new_file.set_id(row_id)
+            new_file.set_parent_id(parent_id)
+            new_file.set_file_name(file_name)
+            new_file.set_file_key(file_key)
+            return new_file
+        return None
 
 
 

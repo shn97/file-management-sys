@@ -111,11 +111,6 @@ class LoginPage extends React.Component {
     }
   }
 
-  handleUploadFile() {
-    let data = this.state;
-    $.ajax({});
-  }
-
   displayLoginButton() {
     return React.createElement("div", null, React.createElement("button", {
       id: "btnCreateUser",
@@ -150,9 +145,60 @@ class FileManagementPage extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      selectedFile: null
+      selectedFileInfo: null,
+      uploadProgress: 0,
+      showCreateFolderDialog: false
     };
+    this.fileUpload = React.createRef();
+    this.handleOnClickUpload = this.handleOnClickUpload.bind(this);
+    this.handleUploadFile = this.handleUploadFile.bind(this);
+    this.handleOnClickCreateFolder = this.handleOnClickCreateFolder.bind(this);
     this.handleOnLogout = this.handleOnLogout.bind(this);
+    this.handleOnSelectFile = this.handleOnSelectFile.bind(this);
+    this.isSelected = this.isSelected.bind(this);
+  }
+
+  handleOnClickUpload() {
+    this.fileUpload.current.click();
+  }
+
+  handleUploadFile(event) {
+    let files = event.target.files;
+
+    if (files.length > 0) {
+      const max_file_size = 5 * 1024 * 1000;
+      let file = files[0];
+
+      if (file.filename === "") {
+        alert("Filename cannot be empty");
+        return;
+      } else if (file.size > max_file_size) {
+        alert("File size is too large!");
+        return;
+      }
+
+      let data = new FormData();
+      data.append("file", files[0]);
+      data.append("parentId", this.state.selectedFileInfo.fileId);
+      axios.post("/api/files", data, {
+        onUploadProgress: progress => {
+          let uploadProgress = progress.loaded / progress.total * 100;
+          this.setState({
+            uploadProgress: uploadProgress
+          });
+        }
+      }).then(response => {
+        if (!response.success) {
+          alert("Failed to upload File: " + response.msg);
+        }
+      });
+    }
+  }
+
+  handleOnClickCreateFolder(shouldShowDialog) {
+    this.setState({
+      showCreateFolderDialog: shouldShowDialog
+    });
   }
 
   handleOnLogout() {
@@ -170,25 +216,63 @@ class FileManagementPage extends React.Component {
     });
   }
 
+  handleOnSelectFile(fileInfo) {
+    this.setState({
+      selectedFileInfo: fileInfo
+    });
+  }
+
+  isSelected(fileId) {
+    return this.state.selectedFileInfo && this.state.selectedFileInfo.fileId === fileId;
+  }
+
   render() {
+    let shouldDisplayButtons = this.state.selectedFileInfo && this.state.selectedFileInfo.isFolder && this.state.selectedFileInfo.fileId > 0 ? "" : "none";
     let fileTree = [];
 
     if (this.props.isLoggedIn) {
       fileTree.push(React.createElement(File, {
         fileId: -1,
-        fileName: ""
+        fileName: "",
+        isFolder: true,
+        isExpanded: false,
+        isSelected: this.isSelected,
+        handleOnSelectFile: this.handleOnSelectFile
       }));
     }
 
     return React.createElement("div", null, React.createElement("div", {
-      id: "divTopBar"
+      id: "divTopBar",
+      className: "topBar"
     }, React.createElement("button", {
+      id: "btnUploadFile",
+      className: "btnTopBar",
+      style: {
+        display: shouldDisplayButtons
+      },
+      onClick: this.handleOnClickUpload
+    }, "Upload File"), React.createElement("button", {
+      id: "btnCreateFolder",
+      className: "btnTopBar",
+      style: {
+        display: shouldDisplayButtons
+      },
+      onClick: this.handleOnClickCreateFolder
+    }, "Create Folder"), React.createElement("button", {
       id: "btnLogout",
       className: "btnTopBar",
       onClick: this.handleOnLogout
     }, "Logout")), React.createElement("div", {
       id: "divFileTreeContainer"
-    }, fileTree));
+    }, fileTree), React.createElement("input", {
+      id: "fileUpload",
+      ref: this.fileUpload,
+      type: "file",
+      style: {
+        display: "none"
+      },
+      onChange: this.handleUploadFile
+    }));
   }
 
 }
@@ -204,7 +288,8 @@ class File extends React.Component {
     this.state = {
       fileId: this.props.fileId,
       fileName: this.props.fileName,
-      isExpanded: false,
+      isExpanded: this.props.isExpanded,
+      isSelected: false,
       childrenFiles: []
     };
     this.getFiles = this.getFiles.bind(this);
@@ -236,8 +321,12 @@ class File extends React.Component {
             let childrenFiles = [];
             files.forEach(child => {
               childrenFiles.push(React.createElement(File, {
-                fileId: child.fileId,
-                filename: child.fileName
+                fileId: child.file_id,
+                fileName: child.file_name,
+                isFolder: child.is_folder,
+                isExpanded: this.state.isExpanded,
+                isSelected: this.props.isSelected,
+                handleOnSelectFile: this.props.handleOnSelectFile
               }));
             });
             this.setState({
@@ -253,18 +342,41 @@ class File extends React.Component {
 
   handleOnClickFile(event) {
     let shouldExpand = !this.state.isExpanded;
-    this.handleGetFiles(shouldExpand, event.target.dataset.value);
+    let fileInfo = {};
+
+    if (shouldExpand && this.props.isFolder) {
+      this.getFiles(this.state.fileId);
+    }
+
+    if (shouldExpand) {
+      fileInfo = {
+        fileId: this.state.fileId,
+        isFolder: this.props.isFolder
+      };
+    } else {
+      fileInfo = {
+        fileId: null,
+        isFolder: null
+      };
+    }
+
+    this.props.handleOnSelectFile(fileInfo);
     this.setState({
       isExpanded: shouldExpand
     });
   }
 
   render() {
-    return React.createElement("div", null, React.createElement("span", {
-      className: "fileNode",
-      onClick: this.handleOnClickFile,
-      "data-value": this.state.fileId
-    }, this.state.fileName, this.state.childrenFiles));
+    this.state.isSelected = this.props.isSelected(this.state.fileId);
+    let fileNodeClass = "fileNode";
+    fileNodeClass += this.state.isSelected ? " selected" : "";
+    let childrenFileNodes = this.state.isExpanded ? this.state.childrenFiles : [];
+    return React.createElement("div", {
+      className: "fileNodeContainer"
+    }, React.createElement("span", {
+      className: fileNodeClass,
+      onClick: this.handleOnClickFile
+    }, this.state.fileName), childrenFileNodes);
   }
 
 }

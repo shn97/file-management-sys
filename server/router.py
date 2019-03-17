@@ -1,11 +1,14 @@
+import os
 from flask import Flask, request, render_template, g, jsonify, send_from_directory, session, make_response
-
-from json import dumps
+from werkzeug.utils import secure_filename
 
 from server.database.DatabaseManagment import DatabaseManagement
 from server.models.User import User
 from server.models.File import File
+
 import json
+
+UPLOAD_DIR = "./files"
 
 app = Flask(__name__)
 # TODO: Make a more secure secret key
@@ -60,6 +63,28 @@ def get_files():
 
     files_dict_list = [file.to_dict() for file in files]
     return jsonify(success=success, data=files_dict_list)
+
+@app.route('/api/files', methods=['POST'])
+def upload_file():
+    data = request.form
+    parent_id = int(data.get("parentId"))
+    success = False
+    msg = ""
+    if request.method == "POST":
+        if "file" not in request.files:
+            msg = "No file to upload"
+        else:
+            file = request.files["file"]
+            if file.filename == "":
+                msg = "File name cannot be empty"
+            else:
+                # TODO: Add  file type/extension check
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(UPLOAD_DIR, filename))
+                File.add_file(parent_id, filename, False)
+                success = True
+    return jsonify(success=success, msg=msg)
+
 
 
 @app.route('/')

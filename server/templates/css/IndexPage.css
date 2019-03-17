@@ -12,16 +12,29 @@
     margin-top: 15px;
 }
 
+.topBar {
+    overflow: auto;
+}
+
 .btnTopBar {
-    float: right;
     font-size: 16px;
     cursor: pointer;
     text-align: center;
     color: floralwhite;
     background-color: #808080;
     padding: 10px 20px 10px 20px;
+    margin: 8px;
     border: none;
     border-radius: 10px;
+}
+
+#btnLogout {
+    float: right;
+}
+
+.fileNodeContainer {
+    margin-top: 0.5em;
+    margin-left: 2em;
 }
 
 .fileNode {
@@ -30,8 +43,11 @@
     text-align: center;
     color: black;
     background-color: lightskyblue;
-    padding: 5px 10px 5px 0.5em;
+    padding: 5px 10px 5px 5px;
     border: none;
     border-radius: 8px;
+}
 
+.fileNode.selected {
+    border: black solid 1px;
 }
