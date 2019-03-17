@@ -73,6 +73,8 @@ class LoginPage extends React.Component {
                 success : (response) => {
                     if (response.success) {
                         alert("Successfully created user! You can now login ")
+                    } else if (response.msg && response.msg !== "") {
+                            alert(response.msg);
                     } else {
                         alert("Failed to create user " + this.state.username)
                     }
@@ -96,7 +98,7 @@ class LoginPage extends React.Component {
                     if (response.success) {
                         this.props.handleLoginRedirect()
                     } else {
-                        alert("Failed to login to " + this.state.username)
+                        alert("Failed to login to " + this.state.username);
                     }
                 }
             })
@@ -145,13 +147,14 @@ class FileManagementPage extends React.Component {
             selectedFileInfo: null,
             deleteFileInfo: null,
             uploadProgress: 0,
-            showCreateFolderDialog: false
+            createFolder: false
         };
 
         this.fileUpload = React.createRef();
         this.handleOnClickUpload = this.handleOnClickUpload.bind(this);
         this.handleUploadFile = this.handleUploadFile.bind(this);
         this.handleOnDeleteFile = this.handleOnDeleteFile.bind(this);
+        this.handleOnSetCreateFolder = this.handleOnSetCreateFolder.bind(this);
         this.handleOnClickCreateFolder = this.handleOnClickCreateFolder.bind(this);
         this.handleOnLogout = this.handleOnLogout.bind(this);
         this.handleOnSelectFile = this.handleOnSelectFile.bind(this);
@@ -217,8 +220,12 @@ class FileManagementPage extends React.Component {
         return this.state.deleteFileInfo && this.state.deleteFileInfo.fileId === fileId;
     }
 
-    handleOnClickCreateFolder(shouldShowDialog) {
-        this.setState({showCreateFolderDialog : shouldShowDialog})
+    handleOnSetCreateFolder(doCreateFolder) {
+        this.setState({createFolder : doCreateFolder})
+    }
+
+    handleOnClickCreateFolder() {
+        this.handleOnSetCreateFolder(true)
     }
 
     handleOnSelectFile(fileInfo) {
@@ -250,8 +257,9 @@ class FileManagementPage extends React.Component {
                                         ? "" : "none";
         let displayFolderOnlyButtons =  isAnyFileSelected && this.state.selectedFileInfo.isFolder
                                           ? "" : "none";
-        let displayDeleteButton = isAnyFileSelected && !this.state.selectedFileInfo.isFolder
-                                    ? "" : "none";
+        let displayIfFileIsNotRoot = isAnyFileSelected && !this.state.selectedFileInfo.isRoot
+                                        ? "" : "none";
+
         let fileTree = [];
         if (this.props.isLoggedIn) {
             fileTree.push(
@@ -262,7 +270,9 @@ class FileManagementPage extends React.Component {
                     isExpanded={false}
                     isSelected={this.isSelected}
                     isDelete={this.isDeleted}
-                    handleOnSelectFile={this.handleOnSelectFile}/>)
+                    createFolder={this.state.createFolder}
+                    handleOnSelectFile={this.handleOnSelectFile}
+                    handleOnSetCreateFolder={this.handleOnSetCreateFolder}/>)
         }
 
         return (
@@ -272,8 +282,11 @@ class FileManagementPage extends React.Component {
                             style={{display: displayFolderOnlyButtons}}
                             onClick={this.handleOnClickUpload}>Upload File</button>
                     <button id="btnDeleteFile" className="btnTopBar"
-                            style={{display: displayDeleteButton }}
-                            onClick={this.handleOnDeleteFile}>Delete File</button>
+                            style={{display: displayIfFileIsNotRoot }}
+                            onClick={this.handleOnDeleteFile}>
+                                {isAnyFileSelected && this.state.selectedFileInfo.isFolder
+                                    ? "Delete Folder" : "Delete File"}
+                    </button>
                     <button id="btnCreateFolder" className="btnTopBar"
                             style={{display: displayFolderOnlyButtons}}
                             onClick={this.handleOnClickCreateFolder}>Create Folder</button>
@@ -315,10 +328,14 @@ class File extends React.Component {
             isRoot: false,
             isExpanded: this.props.isExpanded,
             isSelected: false,
+            creatingFolder: false,
+            shouldUpdateChildren: false,
             childrenFiles: []
         };
 
         this.getFiles = this.getFiles.bind(this);
+        this.renderChildFile = this.renderChildFile.bind(this);
+        this.updateChildren = this.updateChildren.bind(this);
         this.handleOnClickFile = this.handleOnClickFile.bind(this);
         this.handleOnBlur = this.handleOnBlur.bind(this);
 
@@ -344,18 +361,10 @@ class File extends React.Component {
                             fileName: files[0].file_name,
                             isRoot: true
                         });
-                     } else {
+                     } else if (this.state.childrenFiles.length !== files) {
                          let childrenFiles = [];
                          files.forEach((child) => {
-                             childrenFiles.push(
-                                 <File
-                                     fileId={child.file_id}
-                                     fileName={child.file_name}
-                                     isFolder={child.is_folder}
-                                     isExpanded={this.state.isExpanded}
-                                     isSelected={this.props.isSelected}
-                                     isDelete={this.isDeleted}
-                                     handleOnSelectFile={this.props.handleOnSelectFile}/>)
+                             childrenFiles.push(this.renderChildFile(child));
                          });
                          this.setState({childrenFiles: childrenFiles});
                      }
@@ -369,7 +378,7 @@ class File extends React.Component {
     handleOnClickFile(event) {
         let shouldExpand = !this.state.isExpanded;
         let fileInfo = {};
-        if (shouldExpand && this.props.isFolder) {
+        if (shouldExpand && this.props.isFolder && this.state.childrenFiles.length === 0) {
             this.getFiles(this.state.fileId);
         }
 
@@ -425,11 +434,72 @@ class File extends React.Component {
         this.props.handleOnSelectFile(fileInfo);
     }
 
+    handleCreateFolder() {
+        if (this.props.createFolder && !this.state.creatingFolder && this.state.isSelected) {
+            this.state.creatingFolder = true;
+            let new_folder_data = {
+                file_name: "New Folder",
+                parent_id: this.state.fileId
+            };
+
+             $.ajax({
+                url: "/api/folders",
+                type: "POST",
+                data: new_folder_data,
+                success: (response) => {
+                    if (response.success && response.data) {
+                        let folder = response.data;
+                        this.state.childrenFiles.push(this.renderChildFile(folder));
+                        this.setState({childrenFiles : this.state.childrenFiles});
+                    } else {
+                        alert("Failed to create new folder!")
+                    }
+                    this.state.creatingFolder = false;
+                }
+            });
+            this.props.handleOnSetCreateFolder(false);
+        }
+    }
+
+    updateChildren() {
+        let childrenFiles = this.state.childrenFiles;
+        this.state.childrenFiles = [];
+        childrenFiles.forEach((child) => {
+            this.state.childrenFiles.push(this.renderChildFile(child));
+        })
+        this.state.shouldUpdateChildren = false;
+    }
+
+    renderChildFile(child) {
+        return (
+            <File
+                 fileId={child.file_id || child.props && child.props.fileId}
+                 fileName={child.file_name || child.props && child.props.fileName}
+                 isFolder={child.is_folder || child.props && child.props.isFolder}
+                 isExpanded={this.state.isExpanded}
+                 isSelected={this.props.isSelected}
+                 isDelete={this.isDeleted}
+                 createFolder={this.props.createFolder}
+                 handleOnSelectFile={this.props.handleOnSelectFile}
+                 handleOnSetCreateFolder={this.props.handleOnSetCreateFolder}/>
+         )
+    }
+
     render() {
         this.state.isSelected = this.props.isSelected(this.state.fileId);
         let fileNodeClass = "fileNode";
         fileNodeClass += this.state.isSelected ? " selected" : "";
         let childrenFileNodes = this.state.isExpanded ? this.state.childrenFiles : [];
+
+        this.state.shouldUpdateChildren = this.props.createFolder;
+        if (this.state.shouldUpdateChildren) {
+            this.renderChildFile = this.renderChildFile.bind(this);
+            this.updateChildren = this.updateChildren.bind(this);
+            this.updateChildren();
+        }
+
+        this.handleCreateFolder = this.handleCreateFolder.bind(this);
+            this.handleCreateFolder();
 
         return (
             <div className="fileNodeContainer">

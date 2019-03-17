@@ -57,17 +57,6 @@ class File:
         return False
 
     @staticmethod
-    def check_user_root_folder_exists(file_name: str) -> bool:
-        if file_name is not None:
-            query = "SELECT * FROM files " \
-                    "WHERE id=-1 AND file_name=:file_name;"
-            params = dict(file_name=file_name)
-            results, row_id, row_count = File.db_manager.execute_query(query, params)
-            if results is not None and len(results) > 0:
-                return True
-        return False
-
-    @staticmethod
     def generate_unique_file_key() -> str:
         file_key = None
         while file_key is None or File.check_file_key_exists(file_key):
@@ -77,21 +66,22 @@ class File:
     @staticmethod
     def create_user_root_folder(username: str) -> Optional["File"]:
         file_name = File.ROOT_FOLDER_PREFIX + username
+        return File.create_folder(file_name)
 
+    @staticmethod
+    def create_folder(file_name: str, parent_id: int = -1) -> Optional["File"]:
         if not File.check_user_root_folder_exists(file_name):
-            query = "INSERT INTO files (file_name) VALUES (:file_name);"
-            params = dict(file_name=file_name)
+            query = "INSERT INTO files (file_name, parent_id) " \
+                    "VALUES (:file_name, :parent_id);"
+            params = dict(file_name=file_name, parent_id=parent_id)
             results, row_id, row_count = File.db_manager.execute_query(query, params)
 
             if row_id is not None and row_id > 0:
-                root_folder = File(file_name)
-                root_folder.set_id(row_id)
-                return root_folder
+                folder = File(file_name)
+                folder.set_id(row_id)
+                folder.set_parent_id(parent_id)
+                return folder
         return None
-
-    @staticmethod
-    def create_folder():
-        return
 
     @staticmethod
     def get_file(file_id: int) -> Optional["File"]:
@@ -162,14 +152,28 @@ class File:
 
     @staticmethod
     def delete_file(file_id: int) -> bool:
+        success = True
         file = File.get_file(file_id)
-        if file is not None and File.delete_file_from_disk(file.get_file_key()):
-            query = "DELETE FROM files WHERE id=:file_id;"
-            params = dict(file_id=file_id)
-            results, row_id, row_count = File.db_manager.execute_query(query, params)
+        if file is not None:
+            is_file = file.get_file_key() is not None
+            if is_file:
+                success = File.delete_file_from_disk(file.get_file_key()) and File.delete_file_from_db(file_id)
+            else:
+                children = File.get_children_files(file_id)
+                if children is not None:
+                    for child in children:
+                        success = success and File.delete_file(child.get_id())
+                success = success and File.delete_file_from_db(file_id)
+        return success
 
-            if row_count is not None and row_count == 1:
-                return True
+    @staticmethod
+    def delete_file_from_db(file_id: int) -> bool:
+        query = "DELETE FROM files WHERE id=:file_id;"
+        params = dict(file_id=file_id)
+        results, row_id, row_count = File.db_manager.execute_query(query, params)
+
+        if row_count is not None and row_count == 1:
+            return True
         return False
 
     @staticmethod
@@ -188,7 +192,6 @@ class File:
             if os.path.isfile(file_path):
                 os.unlink(file_path)
                 return True
-            # elif os.path.isdir(file_path): shutil.rmtree(file_path)
         except Exception as e:
             print(e)
         return False

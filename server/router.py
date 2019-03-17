@@ -2,9 +2,9 @@ import os
 from flask import Flask, request, render_template, g, jsonify, send_from_directory, session, make_response
 from werkzeug.utils import secure_filename
 
-from server.database.DatabaseManagment import DatabaseManagement
-from server.models.User import User
-from server.models.File import File
+from database.DatabaseManagment import DatabaseManagement
+from models.User import User
+from models.File import File
 
 import json
 
@@ -33,11 +33,17 @@ def login():
 @app.route('/api/users', methods=['POST'])
 def create_user():
     data = request.form
-    username, password = data.get("username"), data.get("password")
-    folder = File.create_user_root_folder(username)
-    user = User(username, password, folder.get_id())
-    result = User.create_user(user)
-    return jsonify(success=result)
+    success = False
+    msg = ""
+    username, password = secure_filename(data.get("username")), data.get("password")
+    user = User(username, password)
+    if not user.check_user_exist():
+        folder = File.create_user_root_folder(username)
+        user.set_root_folder_id(folder.get_id())
+        success = User.create_user(user)
+    else:
+        msg = "User already exists!"
+    return jsonify(success=success, msg=msg)
 
 @app.route('/api/logout', methods=['GET'])
 def logout():
@@ -115,6 +121,22 @@ def get_download_file():
     return send_from_directory(abs_dir_path, file_key,
                                as_attachment=True, attachment_filename=file_name)
 
+@app.route('/api/folders', methods=['POST'])
+def create_folder():
+    data = request.form
+    file_name = secure_filename(data.get("file_name"))
+    parent_id = int(data.get("parent_id"))
+    success = False
+    folder_dict = ""
+    optional_folder = File.create_folder(file_name, parent_id)
+    if optional_folder is not None:
+        folder_dict = optional_folder.to_dict()
+        success = True
+
+    return jsonify(success=success, data=folder_dict)
+
+
+
 @app.route('/')
 def main_page():
     return send_from_directory('templates', 'index.html')
@@ -126,6 +148,8 @@ def add_js_file(path):
 @app.route('/templates/css/<path>')
 def add_css_file(path):
     return send_from_directory('templates/css', path)
+
+
 
 if __name__  == "__main__":
     app.run(debug=True)
