@@ -1,7 +1,7 @@
 import hashlib
 from typing import Optional
 from json import dumps, loads
-from server.database.DatabaseManagment import DatabaseManagement
+from database.DatabaseManagment import DatabaseManagement
 
 class User( ):
     db_manager = DatabaseManagement()
@@ -79,10 +79,12 @@ class User( ):
                 "VALUES (:username, :password, :root_folder_id);"
         params = dict(username=user.username, password=hashed_password,
                       root_folder_id=user._root_folder_id)
-        results, row_id, row_count = User.db_manager.execute_query(query, params)
+        response = User.db_manager.execute_query(query, params)
 
-        if row_id is not None and row_id > 0:
-            return True
+        if response is not None:
+            results, row_id, row_count = response
+            if row_id is not None and row_id > 0:
+                return True
         return False
 
     @staticmethod
