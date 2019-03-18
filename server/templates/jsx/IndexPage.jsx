@@ -131,7 +131,7 @@ class LoginPage extends React.Component {
                 <div>
                     <label className="loginLabel">Password: </label>
                     <input id="inpPassword" className="loginInput"
-                           type="text" onChange={this.handleOnPasswordChange}/>
+                           type="password" onChange={this.handleOnPasswordChange}/>
                 </div>
                 {this.displayLoginButton()}
             </div>
