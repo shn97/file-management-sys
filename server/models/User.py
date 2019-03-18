@@ -72,8 +72,6 @@ class User( ):
 
     @staticmethod
     def create_user(user: "User") -> bool:
-        # TODO: Check if username and password is valid before create_user
-        # TODO:  Check if user exists, return false and err msg
         hashed_password = User.get_hashed_data(user.password)
         query = "INSERT INTO users (username, password, root_folder_id) " \
                 "VALUES (:username, :password, :root_folder_id);"

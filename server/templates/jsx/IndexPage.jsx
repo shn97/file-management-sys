@@ -390,24 +390,24 @@ class File extends React.Component {
     }
 
     handleOnBlur(event) {
-        let new_file_name = event.target.value;
-        if (new_file_name === "") {
+        let newFileName = event.target.value;
+        if (newFileName === "") {
             alert("File name cannot be empty!");
             return
         }
 
         let data = {
             file_id : this.state.fileId,
-            new_file_name : new_file_name
+            new_file_name : newFileName
         };
-        if (new_file_name !== this.state.fileName) {
+        if (newFileName !== this.state.fileName) {
             $.ajax({
                 url: "/api/files",
                 type: "PUT",
                 data: data,
                 success: (response) => {
                     if (response.success) {
-                        this.setState({fileName : new_file_name})
+                        this.setState({fileName : newFileName})
                     } else {
                         alert("Failed to update file name!")
                     }
@@ -505,6 +505,3 @@ ReactDOM.render(
     <IndexPage/>,
     document.getElementById("root")
 );
-
-// .\babel ..\..\ --out-file .
-// .\..\test.js --presets=@babel/preset-react

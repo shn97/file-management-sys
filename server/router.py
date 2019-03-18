@@ -84,7 +84,6 @@ def upload_file():
             if file.filename == "":
                 msg = "File name cannot be empty"
             else:
-                # TODO: Add  file type/extension check
                 filename = secure_filename(file.filename)
                 File.add_file(file, parent_id, filename, False)
                 success = True
