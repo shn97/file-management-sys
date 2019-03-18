@@ -372,7 +372,7 @@ class File extends React.Component {
 
     handleOnClickFile(event) {
         let shouldExpand = !this.state.isExpanded;
-        if (shouldExpand && this.props.isFolder && this.state.childrenFiles.length === 0) {
+        if (shouldExpand && this.props.isFolder) {
             this.getFiles(this.state.fileId);
         }
 
