@@ -70,17 +70,16 @@ class File:
 
     @staticmethod
     def create_folder(file_name: str, parent_id: int = -1) -> Optional["File"]:
-        if not File.check_user_root_folder_exists(file_name):
-            query = "INSERT INTO files (file_name, parent_id) " \
-                    "VALUES (:file_name, :parent_id);"
-            params = dict(file_name=file_name, parent_id=parent_id)
-            results, row_id, row_count = File.db_manager.execute_query(query, params)
+        query = "INSERT INTO files (file_name, parent_id) " \
+                "VALUES (:file_name, :parent_id);"
+        params = dict(file_name=file_name, parent_id=parent_id)
+        results, row_id, row_count = File.db_manager.execute_query(query, params)
 
-            if row_id is not None and row_id > 0:
-                folder = File(file_name)
-                folder.set_id(row_id)
-                folder.set_parent_id(parent_id)
-                return folder
+        if row_id is not None and row_id > 0:
+            folder = File(file_name)
+            folder.set_id(row_id)
+            folder.set_parent_id(parent_id)
+            return folder
         return None
 
     @staticmethod

@@ -141,6 +141,8 @@ class LoginPage extends React.Component {
 
 class FileManagementPage extends React.Component {
 
+    static deletedFileInfos = [];
+
     constructor(props) {
         super(props);
         this.state = {
@@ -157,7 +159,6 @@ class FileManagementPage extends React.Component {
         this.handleOnSetCreateFolder = this.handleOnSetCreateFolder.bind(this);
         this.handleOnClickCreateFolder = this.handleOnClickCreateFolder.bind(this);
         this.handleOnLogout = this.handleOnLogout.bind(this);
-        this.handleOnSelectFile = this.handleOnSelectFile.bind(this);
         this.isSelected = this.isSelected.bind(this);
     }
 
@@ -207,6 +208,10 @@ class FileManagementPage extends React.Component {
                 type: "DELETE",
                 success: (response) => {
                     if (response.success) {
+                        let deleteInfo = {
+                            fileId: data.file_id
+                        };
+                        FileManagementPage.deletedFileInfos.push(deleteInfo);
                         this.setState({deleteFileInfo : this.state.selectedFileInfo});
                     } else {
                         alert("Failed to delete file\"" + this.state.selectedFileInfo.fileName + "\"")
@@ -214,10 +219,6 @@ class FileManagementPage extends React.Component {
                 }
             })
         }
-    }
-
-    isDeleted(fileId) {
-        return this.state.deleteFileInfo && this.state.deleteFileInfo.fileId === fileId;
     }
 
     handleOnSetCreateFolder(doCreateFolder) {
@@ -252,6 +253,7 @@ class FileManagementPage extends React.Component {
     }
 
     render() {
+        this.handleOnSelectFile = this.handleOnSelectFile.bind(this);
         let isAnyFileSelected = this.state.selectedFileInfo && this.state.selectedFileInfo.fileId > 0;
         let displayIfFileSelected = isAnyFileSelected && !this.state.selectedFileInfo.isFolder
                                         ? "" : "none";
@@ -269,10 +271,9 @@ class FileManagementPage extends React.Component {
                     isFolder={true}
                     isExpanded={false}
                     isSelected={this.isSelected}
-                    isDelete={this.isDeleted}
                     createFolder={this.state.createFolder}
-                    handleOnSelectFile={this.handleOnSelectFile}
-                    handleOnSetCreateFolder={this.handleOnSetCreateFolder}/>)
+                    handleOnSelectFile={this.handleOnSelectFile.bind(this)}
+                    handleOnSetCreateFolder={this.handleOnSetCreateFolder.bind(this)}/>)
         }
 
         return (
@@ -377,27 +378,21 @@ class File extends React.Component {
 
     handleOnClickFile(event) {
         let shouldExpand = !this.state.isExpanded;
-        let fileInfo = {};
         if (shouldExpand && this.props.isFolder && this.state.childrenFiles.length === 0) {
             this.getFiles(this.state.fileId);
         }
 
-        if (shouldExpand) {
-             fileInfo = {
-                fileId: this.state.fileId,
-                isFolder: this.props.isFolder,
-                isRoot: this.state.isRoot
-            };
-        } else {
-            fileInfo = {
-                fileId: null,
-                isFolder: null,
-                isRoot: null
-             };
-        }
+         let fileInfo = {
+            fileId: this.state.fileId,
+            isFolder: this.props.isFolder,
+            isRoot: this.state.isRoot
+        };
 
         this.props.handleOnSelectFile(fileInfo);
-        this.setState({isExpanded: shouldExpand});
+        this.setState({
+            isExpanded: shouldExpand,
+            isSelected: true
+        });
     }
 
     handleOnBlur(event) {
@@ -426,12 +421,7 @@ class File extends React.Component {
             })
         }
 
-        let fileInfo = {
-                fileId: this.state.fileId,
-                isFolder: this.props.isFolder,
-                isRoot : this.state.isRoot
-        };
-        this.props.handleOnSelectFile(fileInfo);
+        this.setState({isSelected : false});
     }
 
     handleCreateFolder() {
@@ -466,7 +456,7 @@ class File extends React.Component {
         this.state.childrenFiles = [];
         childrenFiles.forEach((child) => {
             this.state.childrenFiles.push(this.renderChildFile(child));
-        })
+        });
         this.state.shouldUpdateChildren = false;
     }
 
@@ -477,8 +467,7 @@ class File extends React.Component {
                  fileName={child.file_name || child.props && child.props.fileName}
                  isFolder={child.is_folder || child.props && child.props.isFolder}
                  isExpanded={this.state.isExpanded}
-                 isSelected={this.props.isSelected}
-                 isDelete={this.isDeleted}
+                 isSelected={this.state.isSelected}
                  createFolder={this.props.createFolder}
                  handleOnSelectFile={this.props.handleOnSelectFile}
                  handleOnSetCreateFolder={this.props.handleOnSetCreateFolder}/>
@@ -486,23 +475,24 @@ class File extends React.Component {
     }
 
     render() {
-        this.state.isSelected = this.props.isSelected(this.state.fileId);
-        let fileNodeClass = "fileNode";
-        fileNodeClass += this.state.isSelected ? " selected" : "";
-        let childrenFileNodes = this.state.isExpanded ? this.state.childrenFiles : [];
-
-        this.state.shouldUpdateChildren = this.props.createFolder;
-        if (this.state.shouldUpdateChildren) {
-            this.renderChildFile = this.renderChildFile.bind(this);
-            this.updateChildren = this.updateChildren.bind(this);
-            this.updateChildren();
-        }
+        // this.state.isSelected = this.props.isSelected(this.state.fileId);
+        this.renderChildFile = this.renderChildFile.bind(this);
+        this.updateChildren = this.updateChildren.bind(this);
+        this.updateChildren();
 
         this.handleCreateFolder = this.handleCreateFolder.bind(this);
             this.handleCreateFolder();
 
+        let fileNodeClass = "fileNode";
+        fileNodeClass += this.state.isSelected ? " selected" : "";
+        let childrenFileNodes = this.state.isExpanded ? this.state.childrenFiles : [];
+
         return (
-            <div className="fileNodeContainer">
+            <div className="fileNodeContainer" style={{
+                display: FileManagementPage.deletedFileInfos
+                    .filter(d => d.fileId === this.state.fileId)
+                    .length > 0 ? "none" : ""
+            }}>
                 <input className={fileNodeClass}
                        type="text"
                        defaultValue={this.state.fileName}
