@@ -315,12 +315,6 @@ class FileManagementPage extends React.Component {
 }
 
 class File extends React.Component {
-/*    propTypes = {
-        fileId: PropTypes.number,
-        fileName: PropTypes.String,
-        getFiles: PropTypes.func
-    };*/
-
     constructor(props) {
         super(props);
         this.state = {
@@ -486,13 +480,15 @@ class File extends React.Component {
         let fileNodeClass = "fileNode";
         fileNodeClass += this.state.isSelected ? " selected" : "";
         let childrenFileNodes = this.state.isExpanded ? this.state.childrenFiles : [];
+        let icon = this.props.isFolder ? "fa fa-folder" : "fa fa-file";
 
         return (
-            <div className="fileNodeContainer" style={{
+            <div className="fileNodeContainer " style={{
                 display: FileManagementPage.deletedFileInfos
                     .filter(d => d.fileId === this.state.fileId)
                     .length > 0 ? "none" : ""
             }}>
+                <i className={icon}/>
                 <input className={fileNodeClass}
                        type="text"
                        defaultValue={this.state.fileName}

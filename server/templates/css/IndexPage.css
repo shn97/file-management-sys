@@ -75,6 +75,19 @@
 .formDownload {
     display: inline;
 }
+
 :focus {
     outline: none !important;
+}
+
+.fa {
+    padding-right: 10px
+}
+
+.fa-folder {
+    color: #4c4b4b;
+}
+
+.fa-file {
+    color: #00000080;
 }

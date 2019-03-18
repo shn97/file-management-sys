@@ -149,7 +149,9 @@ def add_js_file(path):
 def add_css_file(path):
     return send_from_directory('templates/css', path)
 
-
+@app.route('/templates/webfonts/<path>')
+def add_web_fonts(path):
+    return send_from_directory('templates/webfonts', path)
 
 if __name__  == "__main__":
     app.run(debug=True)
