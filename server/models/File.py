@@ -1,7 +1,7 @@
 import uuid
 import os
 from typing import Optional, List
-from server.database.DatabaseManagment import DatabaseManagement
+from database.DatabaseManagment import DatabaseManagement
 
 class File:
     FILES_DIR = "./files"

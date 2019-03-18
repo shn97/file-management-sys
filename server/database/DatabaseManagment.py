@@ -19,7 +19,7 @@ class DatabaseManagement:
                     self.db.cursor().executescript(f.read())
                 self.db.commit()
 
-    def execute_query(self, query, parameters) -> (list, int):
+    def execute_query(self, query, parameters) -> (list, int, int):
         result = None
         try:
             conn = self.get_db()
